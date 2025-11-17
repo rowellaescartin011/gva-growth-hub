@@ -13,8 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Play, X, Plus, Upload } from "lucide-react";
+import { Play, X, Plus, Upload, Image as ImageIcon, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 
 interface PortfolioItem {
   id: number;
@@ -91,7 +92,58 @@ const Portfolio = () => {
     videoUrl: "",
     description: "",
   });
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadMethod, setUploadMethod] = useState<"url" | "file">("file");
   const { toast } = useToast();
+
+  const imageSchema = z.object({
+    size: z.number().max(20 * 1024 * 1024, "Image must be less than 20MB"),
+    type: z.string().regex(/^image\/(jpeg|jpg|png|gif|webp)$/, "Only JPEG, PNG, GIF, and WebP images are allowed"),
+  });
+
+  const videoSchema = z.object({
+    size: z.number().max(100 * 1024 * 1024, "Video must be less than 100MB"),
+    type: z.string().regex(/^video\/(mp4|webm|ogg)$/, "Only MP4, WebM, and OGG videos are allowed"),
+  });
+
+  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = imageSchema.safeParse({ size: file.size, type: file.type });
+    if (!validation.success) {
+      toast({
+        title: "Invalid Image",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setThumbnailFile(file);
+    const url = URL.createObjectURL(file);
+    setNewWork({ ...newWork, thumbnail: url });
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = videoSchema.safeParse({ size: file.size, type: file.type });
+    if (!validation.success) {
+      toast({
+        title: "Invalid Video",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVideoFile(file);
+    const url = URL.createObjectURL(file);
+    setNewWork({ ...newWork, videoUrl: url });
+  };
 
   const categories = ["All", ...Array.from(new Set(portfolioItems.map((item) => item.category)))];
 
@@ -101,8 +153,16 @@ const Portfolio = () => {
       : portfolioItems.filter((item) => item.category === selectedCategory);
 
   const handleAddWork = () => {
-    // For now, just show a success message
-    // In a real app, you would upload to a backend/storage
+    if (!newWork.title || !newWork.category || !newWork.thumbnail || !newWork.description) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // In a real app with Lovable Cloud, you would upload files to storage here
     toast({
       title: "Work Added Successfully!",
       description: `"${newWork.title}" has been added to your portfolio.`,
@@ -117,6 +177,9 @@ const Portfolio = () => {
       videoUrl: "",
       description: "",
     });
+    setThumbnailFile(null);
+    setVideoFile(null);
+    setUploadMethod("file");
   };
 
   return (
@@ -231,27 +294,130 @@ const Portfolio = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="thumbnail">Thumbnail Image URL *</Label>
-                <Input
-                  id="thumbnail"
-                  placeholder="https://example.com/image.jpg"
-                  value={newWork.thumbnail}
-                  onChange={(e) => setNewWork({ ...newWork, thumbnail: e.target.value })}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Paste an image URL or upload to a service like Imgur
-                </p>
+                <Label htmlFor="thumbnail">Thumbnail Image *</Label>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={uploadMethod === "file" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setUploadMethod("file")}
+                      className="flex-1"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload File
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={uploadMethod === "url" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setUploadMethod("url")}
+                      className="flex-1"
+                    >
+                      URL
+                    </Button>
+                  </div>
+
+                  {uploadMethod === "file" ? (
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <Input
+                          id="thumbnail-upload"
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleThumbnailUpload}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("thumbnail-upload")?.click()}
+                          className="flex-1"
+                        >
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          {thumbnailFile ? thumbnailFile.name : "Choose Image"}
+                        </Button>
+                      </div>
+                      {thumbnailFile && (
+                        <div className="mt-3 relative aspect-video w-full rounded-lg overflow-hidden border">
+                          <img
+                            src={newWork.thumbnail}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Accepted formats: JPEG, PNG, GIF, WebP (max 20MB)
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Input
+                        id="thumbnail"
+                        placeholder="https://example.com/image.jpg"
+                        value={newWork.thumbnail}
+                        onChange={(e) => setNewWork({ ...newWork, thumbnail: e.target.value })}
+                      />
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Paste an image URL from the web
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {newWork.type === "video" && (
                 <div className="space-y-2">
-                  <Label htmlFor="videoUrl">Video URL (YouTube Embed)</Label>
-                  <Input
-                    id="videoUrl"
-                    placeholder="https://www.youtube.com/embed/..."
-                    value={newWork.videoUrl}
-                    onChange={(e) => setNewWork({ ...newWork, videoUrl: e.target.value })}
-                  />
+                  <Label htmlFor="videoUrl">Video *</Label>
+                  <div className="space-y-3">
+                    {uploadMethod === "file" ? (
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <Input
+                            id="video-upload"
+                            type="file"
+                            accept="video/mp4,video/webm,video/ogg"
+                            onChange={handleVideoUpload}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("video-upload")?.click()}
+                            className="flex-1"
+                          >
+                            <Video className="w-4 h-4 mr-2" />
+                            {videoFile ? videoFile.name : "Choose Video"}
+                          </Button>
+                        </div>
+                        {videoFile && (
+                          <div className="mt-3 relative aspect-video w-full rounded-lg overflow-hidden border">
+                            <video
+                              src={newWork.videoUrl}
+                              controls
+                              className="w-full h-full"
+                            />
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Accepted formats: MP4, WebM, OGG (max 100MB)
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Input
+                          id="videoUrl"
+                          placeholder="https://www.youtube.com/embed/..."
+                          value={newWork.videoUrl}
+                          onChange={(e) => setNewWork({ ...newWork, videoUrl: e.target.value })}
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Paste a YouTube embed URL or direct video URL
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
