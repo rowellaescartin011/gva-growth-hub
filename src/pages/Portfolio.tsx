@@ -2,8 +2,19 @@ import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Play, X } from "lucide-react";
+import { Play, X, Plus, Upload } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface PortfolioItem {
   id: number;
@@ -71,6 +82,16 @@ const portfolioItems: PortfolioItem[] = [
 const Portfolio = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newWork, setNewWork] = useState({
+    title: "",
+    category: "",
+    type: "image" as "image" | "video",
+    thumbnail: "",
+    videoUrl: "",
+    description: "",
+  });
+  const { toast } = useToast();
 
   const categories = ["All", ...Array.from(new Set(portfolioItems.map((item) => item.category)))];
 
@@ -78,6 +99,25 @@ const Portfolio = () => {
     selectedCategory === "All"
       ? portfolioItems
       : portfolioItems.filter((item) => item.category === selectedCategory);
+
+  const handleAddWork = () => {
+    // For now, just show a success message
+    // In a real app, you would upload to a backend/storage
+    toast({
+      title: "Work Added Successfully!",
+      description: `"${newWork.title}" has been added to your portfolio.`,
+    });
+    
+    setShowAddModal(false);
+    setNewWork({
+      title: "",
+      category: "",
+      type: "image",
+      thumbnail: "",
+      videoUrl: "",
+      description: "",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,23 +137,156 @@ const Portfolio = () => {
         </div>
       </section>
 
-      {/* Filter Section */}
+      {/* Filter & Add Section */}
       <section className="py-8 border-b">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-center gap-3">
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                onClick={() => setSelectedCategory(category)}
-                className="rounded-full"
-              >
-                {category}
-              </Button>
-            ))}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+            <div className="flex flex-wrap justify-center gap-3">
+              {categories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category)}
+                  className="rounded-full"
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="bg-accent hover:bg-accent/90 rounded-full"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Work
+            </Button>
           </div>
         </div>
       </section>
+
+      {/* Add Work Modal */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setShowAddModal(false)}
+        >
+          <div
+            className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Add New Work</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAddModal(false)}
+              >
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  placeholder="Enter project title"
+                  value={newWork.title}
+                  onChange={(e) => setNewWork({ ...newWork, title: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  value={newWork.category}
+                  onValueChange={(value) => setNewWork({ ...newWork, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Social Media">Social Media</SelectItem>
+                    <SelectItem value="E-commerce">E-commerce</SelectItem>
+                    <SelectItem value="Content Creation">Content Creation</SelectItem>
+                    <SelectItem value="Analytics">Analytics</SelectItem>
+                    <SelectItem value="Design">Design</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Type *</Label>
+                <Select
+                  value={newWork.type}
+                  onValueChange={(value: "image" | "video") => setNewWork({ ...newWork, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="image">Image</SelectItem>
+                    <SelectItem value="video">Video</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="thumbnail">Thumbnail Image URL *</Label>
+                <Input
+                  id="thumbnail"
+                  placeholder="https://example.com/image.jpg"
+                  value={newWork.thumbnail}
+                  onChange={(e) => setNewWork({ ...newWork, thumbnail: e.target.value })}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Paste an image URL or upload to a service like Imgur
+                </p>
+              </div>
+
+              {newWork.type === "video" && (
+                <div className="space-y-2">
+                  <Label htmlFor="videoUrl">Video URL (YouTube Embed)</Label>
+                  <Input
+                    id="videoUrl"
+                    placeholder="https://www.youtube.com/embed/..."
+                    value={newWork.videoUrl}
+                    onChange={(e) => setNewWork({ ...newWork, videoUrl: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your work..."
+                  value={newWork.description}
+                  onChange={(e) => setNewWork({ ...newWork, description: e.target.value })}
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleAddWork}
+                  className="flex-1 bg-accent hover:bg-accent/90"
+                  disabled={!newWork.title || !newWork.category || !newWork.thumbnail || !newWork.description}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Add Work
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Portfolio Grid */}
       <section className="py-16">

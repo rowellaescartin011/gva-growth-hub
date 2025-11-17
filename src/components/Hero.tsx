@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const Hero = () => {
@@ -45,13 +46,24 @@ const Hero = () => {
               General Virtual Assistant
             </p>
             
-            <Button
-              size="lg"
-              onClick={scrollToContact}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              WORK WITH ME
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                onClick={scrollToContact}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
+                WORK WITH ME
+              </Button>
+              <Link to="/portfolio">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                >
+                  VIEW PORTFOLIO
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
